@@ -115,7 +115,9 @@ sqlite3 data/processed/changes.gpkg \
 ### Part 4 — Visualisation
 `change_overview.png` shows before/after RGB, the change-intensity map, and the
 extracted polygons over the AOI. `change_map.html` is an interactive Folium map
-(AOI + polygons over Esri satellite imagery, shaded by confidence).
+with a **before/after swipe slider** (Before RGB in the left pane, After RGB in
+the right), the detected change polygons overlaid on top (shaded by confidence),
+plus a layer control to toggle the change and AOI layers on/off.
 
 ---
 
