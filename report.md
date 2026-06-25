@@ -91,12 +91,47 @@ What the detected changes most plausibly represent:
   gap changes sun angle and atmosphere, shifting *every* pixel slightly (the
   0.047 baseline). The median/MAD threshold deliberately filters this out; it is
   why a naive Otsu threshold over-detected.
-- **Acquisition-geometry artifact.** The diagonal stripe in the intensity map is
-  a Sentinel-2 detector-module / orbit-swath boundary (a slight radiometric
-  offset between adjacent detectors), **not** ground change. It survives as
-  faint speckle but, being below the polygon-area filter and largely below
-  threshold, contributes little to the final features. A production system would
-  mask it using the granule's detector-footprint metadata.
+- **Acquisition-geometry artifact (diagonal seam).** The faint diagonal in the
+  intensity map is a Sentinel-2 detector-module seam plus a global
+  illumination/atmosphere offset, **not** ground change. It is analysed in
+  detail below.
+
+## 4. The diagonal artifact — diagnosis and removal
+
+Reproduce with `python src/artifact_diagnostics.py` →
+`outputs/artifact_diagnostics.png`.
+
+![Artifact diagnostics](outputs/artifact_diagnostics.png)
+
+**Diagnosis.** The diagonal exists *only in the difference image*, not in either
+single date's brightness (top row above is smooth). All three bands also share a
+uniform positive offset (after is +0.024–0.026 reflectance brighter
+everywhere). Together that is a **low-frequency additive bias**: a global
+illumination/atmosphere shift over the 21-day gap, plus a **Sentinel-2
+detector-module seam** — adjacent detectors image at slightly different angles,
+so the radiometric offset between two acquisitions jumps across the seam.
+
+**Does it corrupt the result? No.** The seam/background sits at magnitude
+≈ 0.047, while the global robust threshold is **0.117 — 2.5× higher**. So the
+seam is already excluded from the binary detections; the change polygons cluster
+on the mine, with no false features along the diagonal. The artifact is a
+*visualization-only* blemish on the continuous intensity map.
+
+**Removal options evaluated:**
+
+| Option | Effect | Verdict |
+|--------|--------|---------|
+| **Robust global threshold** (current) | Threshold (0.117) > seam bias (0.047), so seam excluded | **In use** — clean polygons |
+| **Min-area filter** (current) | Drops sub-2000 m² seam speckle | **In use** |
+| **Relative Radiometric Normalization** (subtract smooth background; `REMOVE_BACKGROUND` in config) | Flattens the seam in the *picture*, but lowers the noise floor → over-detects vegetation texture & co-registration edges (0.88 % → 3.6 %; 156 → 494 polygons) | Available, **off by default** — net loss for the vector product |
+| **Detector-footprint mask** (`MSK_DETFOO` GML in the SAFE product) | The correct production fix — masks/normalizes per detector | Not possible here: only the clipped bands were provided, without SAFE metadata |
+
+**Conclusion.** The pipeline already neutralises the artifact via a robust
+threshold above the seam bias plus the area filter, so no change to the default
+detection is warranted. RRN is implemented and available
+(`config.REMOVE_BACKGROUND = True`, then raise `THRESHOLD_K ≈ 5`) for
+low/local-threshold analyses where the seam would otherwise leak in. With full
+SAFE metadata, a detector-footprint mask would be the production-grade solution.
 
 ### Caveats
 - No cloud/shadow mask was applied; any thin cloud or shadow edge would register

@@ -25,12 +25,14 @@ sys.path.append(str(Path(__file__).resolve().parent.parent / "inputs"))
 from example_change_detection import compute_change_distance  # noqa: E402
 
 from config import (  # noqa: E402
+    BACKGROUND_SIGMA,
     CHANGE_BINARY_PATH,
     CHANGE_MAP_PATH,
     DATE_AFTER,
     DATE_BEFORE,
     EXAMPLE_CHANGE_PATH,
     REFLECTANCE_SCALE,
+    REMOVE_BACKGROUND,
     STACK_PATHS,
     THRESHOLD_K,
 )
@@ -46,6 +48,28 @@ def _read_stack(path):
 def _valid_mask(before_dn, after_dn):
     """Pixels that are valid (non-zero) in every band of both dates."""
     return np.all(before_dn > 0, axis=0) & np.all(after_dn > 0, axis=0)
+
+
+def remove_background(diff: np.ndarray, valid: np.ndarray, sigma: float) -> np.ndarray:
+    """Relative Radiometric Normalization of the band-difference cube.
+
+    Subtracts a large-scale smooth background (a nodata-aware Gaussian, i.e.
+    normalized convolution) from each band difference. This flattens the
+    low-frequency additive bias - the global illumination/atmosphere offset and
+    the Sentinel-2 detector-module seam - while leaving compact, high-frequency
+    real change (pit faces, tailings) intact.
+    """
+    from scipy.ndimage import gaussian_filter  # optional dependency, lazy import
+
+    vf = valid.astype(np.float32)
+    denom = gaussian_filter(vf, sigma)
+    denom[denom < 1e-6] = 1e-6
+    out = np.empty_like(diff)
+    for i in range(diff.shape[0]):
+        masked = np.where(valid, diff[i], 0.0)
+        background = gaussian_filter(masked, sigma) / denom
+        out[i] = diff[i] - background
+    return out
 
 
 def robust_threshold(values: np.ndarray, k: float = THRESHOLD_K) -> float:
@@ -73,6 +97,12 @@ def detect_change():
     before = before_dn / REFLECTANCE_SCALE
     after = after_dn / REFLECTANCE_SCALE
     diff = after - before
+
+    # Optional artifact removal (off by default - see config.REMOVE_BACKGROUND).
+    if REMOVE_BACKGROUND:
+        diff = remove_background(diff, valid, BACKGROUND_SIGMA)
+        print(f"  Relative radiometric normalization applied (sigma={BACKGROUND_SIGMA})")
+
     magnitude = np.sqrt(np.sum(diff ** 2, axis=0)).astype(np.float32)  # (h, w)
     magnitude[~valid] = 0.0
 

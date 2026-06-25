@@ -55,6 +55,7 @@ data/processed/
 outputs/
   change_overview.png               # static 4-panel figure
   change_map.html                   # interactive Folium map
+  artifact_diagnostics.png          # detector-seam artifact analysis
 ```
 
 ---
@@ -117,6 +118,17 @@ extracted polygons over the AOI. `change_map.html` is an interactive Folium map
 (AOI + polygons over Esri satellite imagery, shaded by confidence).
 
 ---
+
+## Artifact handling (diagonal detector seam)
+The change-intensity map shows a faint diagonal — a Sentinel-2 detector-module
+seam plus a global illumination offset, **not** ground change. Run
+`python src/artifact_diagnostics.py` for the analysis figure. Key point: the
+global robust threshold (0.117) sits 2.5× above the seam bias (0.047), so the
+seam never enters the detected polygons. A Relative Radiometric Normalization
+step is implemented and available via `config.REMOVE_BACKGROUND = True` (off by
+default — it cleans the picture but over-detects texture). Full diagnosis,
+options table and the production fix (detector-footprint mask) are in
+[`report.md`](report.md#4-the-diagonal-artifact--diagnosis-and-removal).
 
 ## Assumptions
 - The three bands are Sentinel-2 L2A **surface reflectance** scaled by 10000;

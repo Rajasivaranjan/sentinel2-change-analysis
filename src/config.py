@@ -51,6 +51,21 @@ REFLECTANCE_SCALE = 10000.0
 # that affects every pixel between the two dates. k=3 ~ a 3-sigma outlier rule.
 THRESHOLD_K = 3.0
 
+# --- Artifact handling (Relative Radiometric Normalization) ---------------
+# The difference image carries a smooth, low-frequency additive bias: a global
+# illumination/atmosphere offset plus a Sentinel-2 detector-module seam (the
+# faint diagonal in the change-intensity map). See src/artifact_diagnostics.py.
+#
+# REMOVE_BACKGROUND subtracts a large-scale smooth background from each band
+# difference (RRN) so that bias is flattened before computing the magnitude.
+# It is OFF by default: the global robust threshold already sits ABOVE the
+# seam's bias, so the seam never enters the binary detections, and turning RRN
+# on lowers the noise floor and over-detects vegetation texture / co-
+# registration edges. Enable it only for low/local-threshold analysis, and
+# raise THRESHOLD_K (~5) to compensate.
+REMOVE_BACKGROUND = False
+BACKGROUND_SIGMA = 100  # px; ~1 km smoothing window for the background estimate
+
 # Minimum mapped change-polygon area (m^2). At 10 m resolution one pixel is
 # 100 m^2; 2000 m^2 (~20 pixels) drops speckle while keeping real features.
 MIN_POLYGON_AREA_M2 = 2000.0
