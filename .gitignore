@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+
+# Raster sidecar files
+*.aux.xml
+
+# Large, fully reproducible rasters (regenerate with `python src/pipeline.py`).
+# The small SQLite DB (changes.gpkg) and the outputs/ figures ARE committed as
+# deliverables, so they are intentionally NOT ignored here.
+data/processed/*.tif
+instructions.pdf
