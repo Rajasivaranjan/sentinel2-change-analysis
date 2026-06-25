@@ -14,6 +14,10 @@ The pipeline covers the five parts of the assignment:
 | 4 | Visualisation | [`src/visualize.py`](src/visualize.py) | `outputs/change_overview.png`, `change_map.html` |
 | 5 | Analysis & interpretation | [`report.md`](report.md) | — |
 
+📖 **Full engineering reference:** [DOCUMENTATION.md](DOCUMENTATION.md) — architecture,
+module-by-module API, algorithm maths, output/DB specs, configuration, design
+decisions, and troubleshooting.
+
 ---
 
 ## How to run
